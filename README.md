@@ -1,4 +1,4 @@
-# Brewfetch
+# Brewfetch (fork)
 Brewy's crap attempt at making a neofetch for old machines.
 
 this is my own neofetch written with very old distros in mind (like Debian 4 and such) in bash with compatible-ish scripts. 
