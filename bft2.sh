@@ -87,7 +87,11 @@ get_shell_info() {
 
 # Function to get terminal info
 get_terminal_info() {
-    [ -n "$TERM" ] && echo "$TERM" || echo "Unknown"
+    shell_name=$(basename "$SHELL" 2>/dev/null)
+    term_type="$TERM"
+    term_color=$(tput colors 2>/dev/null || echo "Unknown")
+    [ "$term_color" != "Unknown" ] && color_info=" ($term_color colors)" || color_info=""
+    echo "$shell_name - $term_type$color_info"
 }
 
 # Function to get desktop environment
@@ -106,9 +110,10 @@ get_wm() {
 # Function to get GPU info
 get_gpu() {
     if [ -d "/sys/class/drm" ]; then
-        ls -d1 /sys/class/drm/card[0-9]* 2>/dev/null | head -n1 | xargs -I {} cat {}/device/uevent 2>/dev/null | grep "DRIVER=" | sed 's/DRIVER=//' || echo "Unknown"
+        gpu_driver=$(ls -d1 /sys/class/drm/card[0-9]* 2>/dev/null | head -n1 | xargs -I {} cat {}/device/uevent 2>/dev/null | grep "DRIVER=" | sed 's/DRIVER=//')
+        [ -n "$gpu_driver" ] && echo "$gpu_driver" || echo "None detected"
     else
-        echo "Unknown"
+        echo "None detected"
     fi
 }
 
@@ -130,10 +135,10 @@ get_disk_usage() {
 
 # Function to get local IP
 get_local_ip() {
-    if command -v hostname >/dev/null 2>&1; then
-        hostname -I 2>/dev/null | cut -d' ' -f1 || echo "Unknown"
+    if command -v ip >/dev/null 2>&1; then
+        ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' | head -1 || echo "Unknown"
     elif command -v ifconfig >/dev/null 2>&1; then
-        ifconfig 2>/dev/null | grep "inet " | grep -v "127.0.0.1" | head -n1 | awk '{print $2}' || echo "Unknown"
+        ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | head -n1 || echo "Unknown"
     else
         echo "Unknown"
     fi
@@ -145,7 +150,8 @@ get_memory() {
         total=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
         free=$(awk '/MemFree/ {print int($2/1024)}' /proc/meminfo)
         used=$((total - free))
-        echo "${used}MB/${total}MB"
+        percent=$((used * 100 / total))
+        echo "${used}MB/${total}MB (${percent}% used)"
     else
         echo "Unknown"
     fi
